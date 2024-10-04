@@ -1,0 +1,136 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["omitApi"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String   @unique
+  name      String
+  hash      String
+  hashedRT  String?
+  profile   Profile?
+  role      Role?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sales     Sale[]
+
+  @@map("users")
+}
+
+model Profile {
+  id     String @id @default(uuid()) @db.Uuid
+  bio    String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @unique @db.Uuid
+
+  @@map("profiles")
+}
+
+model Product {
+  id             String     @id @default(uuid()) @db.Uuid
+  name           String
+  description    String
+  price          Float
+  costPrice      Float
+  stockQuantity  Int
+  barcode        String     @unique
+  createdAt      DateTime   @default(now())
+  categoryId     String?
+  category       Category?  @relation(fields: [categoryId], references: [id])
+  saleItems      SaleItem[]
+  stockMovements Stock[]
+
+  @@map("products")
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String
+  description String
+  products    Product[]
+
+  @@map("categories")
+}
+
+model Sale {
+  id             String         @id @default(uuid()) @db.Uuid
+  userId         String         @db.Uuid
+  user           User           @relation(fields: [userId], references: [id])
+  saleDate       DateTime       @default(now())
+  totalAmount    Float
+  paymentStatus  PaymentStatus
+  deliveryStatus DeliveryStatus
+  saleItems      SaleItem[]
+  payments       Payment[]
+
+  @@map("sales")
+}
+
+model SaleItem {
+  id        String  @id @default(uuid())
+  saleId    String  @db.Uuid
+  sale      Sale    @relation(fields: [saleId], references: [id])
+  productId String  @db.Uuid
+  product   Product @relation(fields: [productId], references: [id])
+  unitPrice Float
+  costPrice Float
+  quantity  Int
+
+  @@map("sale_items")
+}
+
+model Stock {
+  id           String   @id @default(uuid())
+  productId    String   @db.Uuid
+  product      Product  @relation(fields: [productId], references: [id])
+  quantityIn   Int
+  quantityOut  Int
+  movementDate DateTime @default(now())
+
+  @@map("stocks")
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  saleId        String        @db.Uuid
+  sale          Sale          @relation(fields: [saleId], references: [id])
+  amountPaid    Float
+  paymentDate   DateTime      @default(now())
+  paymentMethod PaymentMethod
+
+  @@map("payments")
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+}
+
+enum DeliveryStatus {
+  PREPARING
+  OUT_FOR_DELIVERY
+  DELIVERED
+}
+
+enum PaymentMethod {
+  CARD
+  BOLETO
+  PIX
+}
+
+enum Role {
+  ADMIN
+  EMPLOYER
+}
